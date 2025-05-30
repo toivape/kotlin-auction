@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auction</title>
+    <link th:href="@{/css/bootstrap.min.css}" rel="stylesheet" />
+    <link type="image/png" sizes="16x16" rel="icon" href="/favicon.ico">
+    <!-- Add jQuery before Bootstrap JS -->
+    <script th:src="@{/js/jquery-3.7.1.min.js}"></script>
+</head>
+<body>
+<div class="container mt-5">
+    <h1 class="text-center mb-4">Auction</h1>
+
+    <div class="alert alert-info" role="alert">
+        <h4 class="alert-heading">Auction Rules</h4>
+        <p>Welcome to our Auction! Here are the rules:</p>
+        <ul>
+            <li>All bids are binding and cannot be retracted.</li>
+            <li>The auction ends at the specified end date and time.</li>
+            <li>Items are sold as-is with no returns or exchanges.</li>
+            <li>Ensure you have read the item description carefully before bidding.</li>
+        </ul>
+        <hr>
+        <p class="mb-0">Happy bidding and good luck!</p>
+    </div>
+
+    <div class="row">
+        <!-- Example Item -->
+        <div th:each="item: ${items}" class="col-md-4 mb-4" th:id="'item_' + ${item.id}">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title" th:text="${item.description}"/>
+                    <p class="card-text">
+                        <strong>Category:</strong> <span th:text="${item.category}"/><br>
+                        <strong>Purchase Date:</strong> <span th:text="${item.purchaseDate}"/><br>
+                        <strong>Closes on:</strong> <span th:text="${item.biddingEndDate}"/><br>
+                        <strong>Current Bid:</strong> <span th:text="${item.currentPrice}"/>€<br>
+                    </p>
+                    <button type="button" class="btn btn-primary bid-button"
+                            data-bs-toggle="modal"
+                            data-bs-target="#myBidModal"
+                            th:data-bs-itemid="${item.id}">
+                        Bid
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div> <!-- end of row -->
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="myBidModal" tabindex="-1" aria-labelledby="myBidModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="myBidModalLabel">Make a bid</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form class="needs-validation" id="bid-form" novalidate>
+                    <input type="hidden" id="item-id" value="TODO"/>
+                    <input type="hidden" id="last-bid-id" value="TODO"/>
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title" id="item-description"></h5>
+                            <div class="alert alert-warning" role="alert" id="error-alert" style="display: none;">
+                                No error
+                            </div>
+                            <p class="card-text">
+                                <strong>Latest Bid:</strong> <span id="last-bid"></span><br>
+                                <strong>Last Bidder:</strong> <span id="last-bidder"></span><br>
+                                <strong>Current Price:</strong> €<span id="bid-current-price"></span><br>
+                            </p>
+
+                            <!-- a table to show bid history -->
+                            <div class="mt-4">
+                                <h6>Bid History</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover" id="bid-history-table">
+                                        <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Bidder</th>
+                                            <th>Price (€)</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody id="bid-history-body">
+                                        <!-- Bid history rows will be inserted here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <label for="bid-amount" class="form-label">Your Bid</label>
+                            <div class="input-group has-validation">
+                                <input type="number" min="1" step="1" class="form-control" id="bid-amount" name="bidAmount" aria-describedby="bidHelpText inputGroupPrepend" required>
+                                <span class="input-group-text" id="inputGroupPrepend">€</span>
+                                <div class="invalid-feedback">
+                                    Please enter a valid bid amount.
+                                </div>
+                            </div>
+                            <div class="form-text" id="bidHelpText">For this item, minimum bid is loading...</div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" id="submit-bid" class="btn btn-primary">Bid</button>
+            </div>
+        </div>
+    </div>
+</div> <!-- end of modal -->
+
+<!-- Bootstrap 5 JS -->
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+<script>
+    $(function() {
+        // Modal reset when hidden
+        $('#myBidModal').on('hidden.bs.modal', function () {
+            // Reset the modal content
+            $('#item-id').val('');
+            $('#last-bid-id').val('');
+            $('#item-description').text('');
+            $('#last-bid').text('');
+            $('#last-bidder').text('');
+            $('#bid-current-price').text('');
+            $('#bidHelpText').text('For this item, minimum bid is loading...');
+            $('#submit-bid').text('Bid');
+
+            // Reset the bid amount input
+            const $bidAmount = $('#bid-amount');
+            $bidAmount.val('').prop('disabled', false).attr('placeholder', '').attr('min', 1);
+
+            // Reset the error alert
+            $('#error-alert').text('').hide();
+
+            // Clear the bid history table
+            $('#bid-history-body').empty();
+
+            // Reset the form validation state
+            $('#bid-form').removeClass('was-validated')[0].reset();
+        });
+
+        // Modal show event
+        $('#myBidModal').on('show.bs.modal', function (event) {
+            // Get latest bid info for the item and show it in the modal
+            const button = $(event.relatedTarget);
+            const auctionItemId = button.data('bs-itemid');
+
+            const defaultBid = {
+                id: "",
+                auctionItemId: "",
+                bidPrice: null,
+                bidderEmail: '-',
+                bidTime: null
+            };
+
+            getItemWithBids(auctionItemId)
+                .then(bidData => {
+                    // Update the modal's content with bid data
+                    $('#item-id').val(auctionItemId);
+                    $('#item-description').text(bidData.description);
+                    $('#bid-current-price').text(bidData.currentPrice);
+
+                    const lastBid = bidData.bids.length > 0 ? bidData.bids[0] : defaultBid;
+
+                    $('#last-bid-id').val(lastBid.id);
+                    $('#last-bid').text(lastBid.bidPrice ? '€' + lastBid.bidPrice : '-');
+                    $('#last-bidder').text(lastBid.bidderEmail);
+
+                    // Set the minimum bid information
+                    const $bidAmount = $('#bid-amount');
+
+                    // First bid can equal the starting price, subsequent bids need to be current price + minimumRaise
+                    let minBidValue;
+                    if (bidData.bids.length === 0) {
+                        // For first bid, minimum is the starting price
+                        minBidValue = bidData.currentPrice;
+                        $('#bidHelpText').text(`This is the first bid. You can bid the starting price of €${minBidValue}.`);
+                    } else {
+                        // For subsequent bids, minimum is current price + minimum raise
+                        minBidValue = bidData.currentPrice + bidData.minimumRaise;
+                        $('#bidHelpText').text(`Minimum bid is €${minBidValue} (current price + minimum raise of €${bidData.minimumRaise}).`);
+                    }
+
+                    // Store minimum bid value in a data attribute for validation
+                    $bidAmount.data('minimum-bid', minBidValue).attr('min', minBidValue);
+
+                    // Clear and populate the bid history table
+                    const $bidHistoryBody = $('#bid-history-body').empty();
+
+                    if (bidData.bids && bidData.bids.length > 0) {
+                        // Sort bids by bidTime in descending order (if needed)
+                        const sortedBids = [...bidData.bids].sort((a, b) => {
+                            return new Date(b.bidTime) - new Date(a.bidTime);
+                        });
+
+                        // Add each bid to the table
+                        $.each(sortedBids, function(i, bid) {
+                            // Format the bid time
+                            const bidTime = bid.bidTime ? new Date(bid.bidTime) : null;
+                            const formattedTime = bidTime ?
+                                `${bidTime.toLocaleDateString()} ${bidTime.toLocaleTimeString()}` : '-';
+
+                            $('<tr>')
+                                .append($('<td>').text(formattedTime))
+                                .append($('<td>').text(bid.bidderEmail))
+                                .append($('<td>').text(bid.bidPrice ? bid.bidPrice : '-'))
+                                .appendTo($bidHistoryBody);
+                        });
+
+                        // Show the bid history table
+                        $('#bid-history-table').show();
+
+                        // Set default value for bid input to minimum bid
+                        $bidAmount.val(minBidValue);
+                    } else {
+                        // If there are no bids, show a message
+                        $('<tr>')
+                            .append($('<td colspan="3" class="text-center">').text('No bids yet'))
+                            .appendTo($bidHistoryBody);
+                    }
+
+                    if (!bidData.bids || bidData.bids.length === 0) {
+                        // If user is first to bid, set the bid amount to the current price
+                        $bidAmount.val(bidData.currentPrice);
+                        $('#submit-bid').text('I am first to bid!');
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to fetch latest bid: ' + error.message, error);
+                    showError({ error: error.message || 'Failed to fetch latest bid. Please try again later.' });
+                });
+        });
+
+        // Validate bid function
+        function validateBid() {
+            const $bidAmount = $('#bid-amount');
+            const bidAmount = parseInt($bidAmount.val());
+            const minimumBid = parseInt($bidAmount.data('minimum-bid'));
+
+            if (isNaN(minimumBid)) {
+                showError({ error: "Could not determine minimum bid amount. Please try again." });
+                return false;
+            }
+
+            if (bidAmount < minimumBid) {
+                showError({ error: `Your bid must be at least €${minimumBid}.` });
+                return false;
+            }
+
+            return true;
+        }
+
+        // Submit bid click event
+        $('#submit-bid').on('click', function(event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            const $form = $('#bid-form');
+            if (!$form[0].checkValidity()) {
+                $form.addClass('was-validated');
+                return;
+            }
+
+            // Add validation for minimum bid
+            if (!validateBid()) {
+                return;
+            }
+
+            submitBid();
+        });
+
+        // Submit bid function
+        function submitBid() {
+            const auctionItemId = $('#item-id').val();
+            const bidAmount = $('#bid-amount').val();
+            const lastBidId = $('#last-bid-id').val();
+
+            $.ajax({
+                url: `/api/auctionitems/${auctionItemId}/bids`,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ amount: bidAmount, lastBidId: lastBidId }),
+                success: function() {
+                    closeModal();
+                    location.reload();
+                },
+                error: function(xhr) {
+                    try {
+                        const errorData = JSON.parse(xhr.responseText);
+                        showError(errorData);
+                    } catch (e) {
+                        showError({ error: 'An error occurred while placing the bid. Please try again later.' });
+                    }
+                }
+            });
+        }
+
+        // Close modal function
+        function closeModal() {
+            const myModalEl = document.getElementById('myBidModal')
+            const modal = bootstrap.Modal.getInstance(myModalEl)
+            modal.hide();
+        }
+
+        // Show error function
+        function showError(errorData) {
+            console.error('Error response:', errorData);
+            const $errorAlert = $('#error-alert');
+            $errorAlert.text(errorData.error).show();
+        }
+
+        // Get item with bids function
+        function getItemWithBids(auctionItemId) {
+            return $.ajax({
+                url: `/api/auctionitems/${auctionItemId}`,
+                type: 'GET',
+                dataType: 'json'
+            }).catch(function(xhr) {
+                console.error('Failed to fetch latest bid with id: ' + auctionItemId, xhr);
+                let errorMsg = 'Failed to fetch latest bid: ' + xhr.status;
+
+                try {
+                    const errorData = JSON.parse(xhr.responseText);
+                    if (errorData.error) {
+                        errorMsg = errorData.error;
+                    }
+                } catch (e) {
+                    // Use default error message
+                }
+
+                throw new Error(errorMsg);
+            });
+        }
+    });
+</script>
+</body>
+</html>

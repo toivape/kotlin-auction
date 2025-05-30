@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auction Admin</title>
+    <link th:href="@{/css/bootstrap.min.css}" rel="stylesheet" />
+    <!-- See https://icons.getbootstrap.com/ for usage instructions -->
+    <!--link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"-->
+    <link th:href="@{/css/bootstrap-icons/bootstrap-icons.css}" rel="stylesheet">
+    <link type="image/png" sizes="16x16" rel="icon" href="/favicon.ico">
+</head>
+<body>
+<div class="container mt-5">
+    <h1 class="text-center mb-4">Auction Admin</h1>
+
+    <!-- Error Alert - Show only if there's an error message -->
+    <div class="alert alert-danger alert-dismissible fade show" role="alert" th:if="${error != null}">
+        <strong>Error!</strong> <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Description</th>
+            <th>Bidding End Date</th>
+            <th>Current Price</th>
+            <th>Times Renewed</th>
+            <th>Is Transferred</th>
+            <th>Number of Bids</th>
+            <th>&nbsp;</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item : ${items}">
+            <td th:text="${item.description}"></td>
+            <td th:text="${item.biddingEndDate}"></td>
+            <td th:text="${item.currentPrice}"></td>
+            <td>
+                <span th:if="${item.timesRenewed > 0}" th:text="${item.timesRenewed}"></span>
+                <span th:unless="${item.timesRenewed > 0}"> </span>
+            </td>
+            <td>
+                <i th:if="${item.isTransferred}" class="bi bi-check-circle"></i>
+                <span th:unless="${item.isTransferred}"> </span>
+            </td>
+            <td th:text="${item.numberOfBids}"></td>
+            <td>
+                <a th:href="@{/admin/edit/{id}(id=${item.id})}" class="btn btn-secondary btn-sm">
+                    <i class="bi bi-pencil"></i>
+                </a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Bootstrap 5 JS -->
+<script th:src="@{/js/bootstrap.bundle.min.js}"></script>
+
+</body>
+</html>

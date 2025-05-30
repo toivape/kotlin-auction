@@ -1,0 +1,28 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: kotlin-auction
+  datasource:
+    url: jdbc:h2:mem:auction;DB_CLOSE_ON_EXIT=TRUE
+    driverClassName: org.h2.Driver
+    username: ${DB_USERNAME:auction}
+    password: ${DB_PASSWORD:7ne9RYK77IjQB43w1Mf6}
+  flyway:
+    enabled: true
+    locations: classpath:/db/migration/structure,classpath:/db/migration/data
+    validate-on-migrate: true
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true
+
+management:
+  endpoints:
+    web:
+      base-path: /
+      path-mapping:
+        health: healthCheck
