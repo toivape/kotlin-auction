@@ -1,7 +1,7 @@
 plugins {
     kotlin("jvm") version "1.9.25"
     kotlin("plugin.spring") version "1.9.25"
-    id("org.springframework.boot") version "3.4.5"
+    id("org.springframework.boot") version "3.5.0"
     id("io.spring.dependency-management") version "1.1.7"
 }
 
@@ -22,6 +22,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("io.github.wimdeblauwe:htmx-spring-boot:4.0.1")
     implementation("io.arrow-kt:arrow-core:1.2.4")
     implementation("io.github.oshai:kotlin-logging-jvm:7.0.3")
@@ -36,6 +37,7 @@ dependencies {
     testImplementation("io.kotest:kotest-assertions-core-jvm:5.8.1")
     testImplementation("io.kotest.extensions:kotest-assertions-arrow:1.4.0")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testImplementation("org.springframework.security:spring-security-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

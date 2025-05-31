@@ -12,11 +12,16 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.security.test.context.support.WithMockUser
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.jdbc.Sql
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.ResultActions
+import org.springframework.test.web.servlet.ResultActionsDsl
 import org.springframework.test.web.servlet.post
 
+@WithMockUser(username = "test-admin@toivape.com", roles = ["ADMIN"])
 @SpringBootTest
 @ActiveProfiles("test")
 @AutoConfigureMockMvc
@@ -25,11 +30,42 @@ class UserDeletesBidTest(
     @Autowired private val auctionService: AuctionService,
 ) {
 
-    private fun getAuctionItem(itemId: String): AuctionItem = auctionService.getAuctionItem(itemId).getOrElse { error ->
-        fail("Could not get auction item $itemId: ${(error as? Throwable)?.message ?: error}")
+    /**
+     * Helper method to get auction item by ID
+     */
+    private fun getAuctionItem(itemId: String): AuctionItem =
+        auctionService.getAuctionItem(itemId).getOrElse { error ->
+            fail("Could not get auction item $itemId: ${(error as? Throwable)?.message ?: error}")
+        }
+
+    /**
+     * Helper method to delete a bid
+     */
+    private fun deleteBid(itemId: String, bidId: String): ResultActionsDsl {
+        return mvc.post("/admin/edit/$itemId/bids/$bidId") {
+            with(csrf())
+        }
     }
 
+    /**
+     * Helper method to assert successful bid deletion
+     */
+    private fun assertBidDeleteSuccess(result: ResultActionsDsl) {
+        result.andExpect {
+            status { isOk() }
+            content { string(containsString("Bid removed successfully")) }
+        }
+    }
 
+    /**
+     * Helper method to assert bid deletion failure
+     */
+    private fun assertBidDeleteFailure(result: ResultActionsDsl, errorMessage: String) {
+        result.andExpect {
+            status { isOk() }
+            content { string(containsString(errorMessage)) }
+        }
+    }
 
     @Sql(
         statements = [
@@ -41,7 +77,7 @@ class UserDeletesBidTest(
     )
     @Test
     fun `Bid is not found after it has been deleted`() {
-       val auctionItemId = "0196c959-58d5-78e9-991e-8fecec8b3633"
+        val auctionItemId = "0196c959-58d5-78e9-991e-8fecec8b3633"
 
         // Find and delete the first bid.
         val auctionItemBefore = getAuctionItem(auctionItemId)
@@ -50,11 +86,8 @@ class UserDeletesBidTest(
             it shouldBe "0196c959-58d5-7495-b48c-912cea40871c"
         }
 
-        mvc.post("/admin/edit/$auctionItemId/bids/$bidIdToDelete")
-            .andExpect {
-                status { isOk() }
-                content { string(containsString("Bid removed successfully")) }
-            }
+        val result = deleteBid(auctionItemId, bidIdToDelete)
+        assertBidDeleteSuccess(result)
 
         // Bid should no longer be found and currentPrice should have changed
         val auctionItemAfter = getAuctionItem(auctionItemId)
@@ -68,11 +101,8 @@ class UserDeletesBidTest(
         val nonExistentBidId = "11111111-1111-1111-1111-111111111111"
 
         // Try to remove a non-existent bid
-        mvc.post("/admin/edit/$auctionItemId/bids/$nonExistentBidId")
-            .andExpect {
-                status { isOk() }
-                content { string(containsString("<span>Failed to remove bid: Bid not found 11111111-1111-1111-1111-111111111111</span>")) }
-            }
+        val result = deleteBid(auctionItemId, nonExistentBidId)
+        assertBidDeleteFailure(result, "<span>Failed to remove bid: Bid not found 11111111-1111-1111-1111-111111111111</span>")
     }
 
     @Sql(
@@ -93,11 +123,8 @@ class UserDeletesBidTest(
         }
 
         // Perform the deletion request
-        mvc.post("/admin/edit/$itemId/bids/$bidId")
-            .andExpect {
-                status { isOk() }
-                content { string(containsString("Bid removed successfully")) }
-            }
+        val result = deleteBid(itemId, bidId)
+        assertBidDeleteSuccess(result)
 
         withClue("Bid was not deleted from the database") {
             getAuctionItem(itemId).bids.shouldBeEmpty()
@@ -116,11 +143,8 @@ class UserDeletesBidTest(
         val bidId = "040804ff-c8de-44c9-ba42-34ed94e32afa"
 
         // Perform the deletion request
-        mvc.post("/admin/edit/$itemId/bids/$bidId")
-            .andExpect {
-                status { isOk() }
-                content { string(containsString("Auction has finished for this item. Bid can not be deleted.")) }
-            }
+        val result = deleteBid(itemId, bidId)
+        assertBidDeleteFailure(result, "Auction has finished for this item. Bid can not be deleted.")
 
         withClue("Bid should not have been deleted from the database") {
             getAuctionItem(itemId).bids.shouldNotBeEmpty()

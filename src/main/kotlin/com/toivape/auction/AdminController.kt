@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.validation.BindingResult
@@ -59,12 +60,14 @@ fun BindingResult.addErrorsToModel(model: Model) =
 @Controller
 class AdminController(private val auctionDao: AuctionDao, private val auctionService:AuctionService, private val bidService: BidService) {
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/admin")
     fun admin(model: Model): String {
         model.addAttribute("items", auctionDao.findAllAdminPageItems())
         return "admin"
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/admin/edit/{itemId}")
     fun editItem(@PathVariable itemId: String, model: Model): String =
         auctionService.getAuctionItem(itemId).fold(
@@ -78,6 +81,7 @@ class AdminController(private val auctionDao: AuctionDao, private val auctionSer
             }
         )
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/admin/edit/{itemId}")
     fun updateItem(@PathVariable itemId: String,
                    @Valid @ModelAttribute request: UpdateAuctionItemRequest,
@@ -94,7 +98,7 @@ class AdminController(private val auctionDao: AuctionDao, private val auctionSer
             { error ->
                 model.addError(error.message)
             },
-            { item ->
+            { _ ->
                 model.addSuccess("Item updated successfully")
             }
         )
@@ -102,6 +106,7 @@ class AdminController(private val auctionDao: AuctionDao, private val auctionSer
         return editItem(itemId, model)
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/admin/edit/{itemId}/bids/{bidId}")
     fun removeBid(@PathVariable itemId: String, @PathVariable bidId: String, model:Model): String{
         bidService.removeBid(itemId, bidId).fold(

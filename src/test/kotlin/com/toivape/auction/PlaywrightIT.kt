@@ -2,11 +2,13 @@ package com.toivape.auction
 
 import arrow.core.getOrElse
 import com.microsoft.playwright.Browser
+import com.microsoft.playwright.BrowserContext
 import com.microsoft.playwright.Page
 import com.microsoft.playwright.Page.WaitForSelectorOptions
 import com.microsoft.playwright.Playwright
 import com.microsoft.playwright.options.LoadState
 import com.microsoft.playwright.options.WaitForSelectorState
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.kotest.assertions.arrow.core.shouldBeRight
 import io.kotest.assertions.fail
 import io.kotest.matchers.booleans.shouldBeTrue
@@ -28,6 +30,8 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.jdbc.Sql
 import java.nio.file.Paths
 
+private val log = KotlinLogging.logger {}
+
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ActiveProfiles("test")
@@ -35,6 +39,10 @@ class PlaywrightIT(@Autowired val bidService: BidService, @Autowired val auction
 
     companion object {
         private const val AUCTION_ITEM_ID = "b030b21b-73f9-40ff-8518-4a45f2c9b769"
+
+        // Add test user credentials
+        private const val TEST_USERNAME = "dummy-user@toivape.com"
+        private const val TEST_PASSWORD = "stork"  // Use the password from your SecurityConfig
     }
 
     @LocalServerPort
@@ -55,14 +63,45 @@ class PlaywrightIT(@Autowired val bidService: BidService, @Autowired val auction
         playwright?.close()
     }
 
-    fun Browser.frontpage(): Page {
+    /**
+     * Logs in a user and returns a browser context with the authenticated session
+     */
+    private fun Browser.login(): BrowserContext {
         val context = this.newContext()
-        context.setDefaultTimeout(1000.0)
+        context.setDefaultTimeout(5000.0)  // Increased timeout for login
+        val page = context.newPage()
+
+        // Navigate to frontpage to trigger login
+        page.navigate("$baseUrl/")
+
+        // Fill in login form
+        page.fill("input[name='username']", TEST_USERNAME)
+        page.fill("input[name='password']", TEST_PASSWORD)
+
+        // Submit the form
+        page.click("button[type='submit']")
+
+        // Wait for navigation to complete (should redirect to the homepage after login)
+        page.waitForSelector("text=Happy bidding")
+        log.info {"User logged in"}
+
+        // Return the authenticated context that can be used for future requests
+        return context
+    }
+
+    /**
+     * Opens the front page with authentication
+     */
+    fun Browser.frontpage(): Page {
+        val context = this.login()
         val page = context.newPage()
         page.navigate("$baseUrl/")
         return page
     }
 
+    /**
+     * Opens an auction item modal with authentication
+     */
     fun Browser.openAuctionItemModal(itemId: String = AUCTION_ITEM_ID): Page {
         val page = frontpage()
 
@@ -78,6 +117,7 @@ class PlaywrightIT(@Autowired val bidService: BidService, @Autowired val auction
     }
 
     private fun Page.takeScreenshot(){
+        log.info{"takeScreenshot"}
         screenshot(Page.ScreenshotOptions()
             .setPath(Paths.get("screenshot.png"))
             .setFullPage(true))
@@ -87,7 +127,7 @@ class PlaywrightIT(@Autowired val bidService: BidService, @Autowired val auction
     fun `Playwright can open front page`() {
         playwright!!.chromium().launch().use { browser ->
             val page = browser.frontpage()
-            page.title() shouldBe "Marketplace"
+            page.title() shouldBe "Auction"
         }
     }
 
@@ -265,4 +305,35 @@ class PlaywrightIT(@Autowired val bidService: BidService, @Autowired val auction
         }
     }
 
+    @Test
+    fun `User can log in successfully`() {
+        playwright!!.chromium().launch().use { browser ->
+            val context = browser.newContext()
+            val page = context.newPage()
+
+            // Navigate to the login page
+            page.navigate("$baseUrl/login")
+
+            // Fill in login form
+            page.fill("input[name='username']", TEST_USERNAME)
+            page.fill("input[name='password']", TEST_PASSWORD)
+
+            // Take screenshot for debugging if needed
+            // page.takeScreenshot()
+
+            // Submit the form
+            page.click("button[type='submit']")
+
+            // Wait for navigation to complete (should redirect to the homepage after login)
+            page.waitForURL("$baseUrl/")
+
+            // Verify we're logged in by checking for some element that indicates a successful login
+            page.waitForSelector(".card")  // Assuming there are card elements on the homepage
+
+            // Could also check for username display if available
+            // page.textContent(".user-info") shouldContain TEST_USERNAME
+
+            page.title() shouldBe "Auction"
+        }
+    }
 }

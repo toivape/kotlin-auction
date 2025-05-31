@@ -100,7 +100,7 @@ INSERT INTO bid (id, fk_auction_item_id, bid_price, bidder_email, bid_time)
 VALUES ('85180ece-e25e-46ab-b456-8fbecf1dcc4b', '271e446e-5f83-44ef-9a64-cbd1139d26c9', 200, 'bidder6@toivape.com',
         '2025-01-20 12:30:00'),
        ('04c4656a-5f4c-40b2-aff1-07f367bfcfc2', '271e446e-5f83-44ef-9a64-cbd1139d26c9', 210,
-        'dummy-user@toivape.com', '2025-01-20 12:31:00');
+        'test-user@toivape.com', '2025-01-20 12:31:00');
 
 -- Calculate current price
 INSERT INTO auction_item (id, external_id, description, category, purchase_date, purchase_price, bidding_end_date,

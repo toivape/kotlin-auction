@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.security.test.context.support.WithAnonymousUser
+import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.jdbc.Sql
 import org.springframework.test.web.servlet.MockMvc
@@ -13,7 +15,10 @@ import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 
+
+@WithMockUser(username = "test-admin@toivape.com", roles = ["ADMIN"])
 @SpringBootTest
 @ActiveProfiles("test")
 @AutoConfigureMockMvc
@@ -35,6 +40,7 @@ class AdminControllerTest(
             }
     }
 
+    @WithAnonymousUser()
     @Test
     fun `Health check is successful`() {
         mvc.get("/healthCheck")
@@ -74,6 +80,7 @@ class AdminControllerTest(
         )
 
         mvc.post("/admin/edit/$itemId") {
+            with(csrf())
             updatedValues.forEach { param(it.key, it.value) }
         }
             .andExpect {
@@ -114,6 +121,7 @@ class AdminControllerTest(
         )
 
         mvc.post("/admin/edit/$itemId") {
+            with(csrf())
             updatedValues.forEach { param(it.key, it.value) }
         }
             .andExpect {
@@ -146,6 +154,7 @@ class AdminControllerTest(
         )
 
         mvc.post("/admin/edit/$itemId") {
+            with(csrf())
             updatedValues.forEach { param(it.key, it.value) }
         }
             .andExpect {

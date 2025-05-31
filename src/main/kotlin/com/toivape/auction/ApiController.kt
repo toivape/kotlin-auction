@@ -10,6 +10,9 @@ import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.core.userdetails.User
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -78,16 +81,18 @@ class ApiController(val bidService: BidService, val auctionService: AuctionServi
         }
     }
 
+    @PreAuthorize("hasRole('USER')")
     @PostMapping("/api/auctionitems/{auctionItemId}/bids")
     fun placeBid(
         @PathVariable @ValidUUID auctionItemId: String,
-        @Valid @RequestBody bid: BidRequest
+        @Valid @RequestBody bid: BidRequest,
+        @AuthenticationPrincipal user: User
     ): ResponseEntity<Any> {
-        val dummyUser = "dummy-user@toivape.com"
-        log.info { "New bid $bid on auction item $auctionItemId by user $dummyUser" }
+        val username = user.username
+        log.info { "New bid $bid on auction item $auctionItemId by user $username" }
 
         return when (val result: Either<Exception, Bid> =
-            bidService.addBid(auctionItemId, dummyUser, bid.amount!!, bid.lastBidId)) {
+            bidService.addBid(auctionItemId, username, bid.amount!!, bid.lastBidId)) {
             is Either.Right -> ResponseEntity(result.value, HttpStatus.CREATED)
             is Either.Left -> {
                 when (result.value) {
@@ -115,6 +120,7 @@ class ApiController(val bidService: BidService, val auctionService: AuctionServi
         }
     }
 
+    @PreAuthorize("hasRole('USER')")
     @GetMapping("/api/auctionitems/{auctionItemId}")
     fun getItemWithBids(@PathVariable @ValidUUID auctionItemId: String): ResponseEntity<AuctionItem> {
         return when (val result: Either<Exception, AuctionItem> = auctionService.getAuctionItem(auctionItemId)) {

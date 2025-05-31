@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
+import org.springframework.security.test.context.support.WithMockUser
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.jdbc.Sql
 import org.springframework.test.web.servlet.MockMvc
@@ -17,6 +19,7 @@ import org.springframework.test.web.servlet.post
 import java.math.BigDecimal
 import java.time.LocalDate
 
+@WithMockUser(username = "test-user@toivape.com", roles = ["USER"])
 @SpringBootTest
 @ActiveProfiles("test")
 @AutoConfigureMockMvc
@@ -38,6 +41,7 @@ class ApiControllerTest(
 
     private fun postItem(item: NewAuctionItem) =
         mvc.post("/api/auctionitems") {
+            with(csrf())
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(item)
         }

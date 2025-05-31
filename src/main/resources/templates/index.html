@@ -8,6 +8,8 @@
     <link type="image/png" sizes="16x16" rel="icon" href="/favicon.ico">
     <!-- Add jQuery before Bootstrap JS -->
     <script th:src="@{/js/jquery-3.7.1.min.js}"></script>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
 </head>
 <body>
 <div class="container mt-5">
@@ -278,10 +280,15 @@
             const auctionItemId = $('#item-id').val();
             const bidAmount = $('#bid-amount').val();
             const lastBidId = $('#last-bid-id').val();
+            const csrfToken = document.querySelector("meta[name='_csrf']").content;
+            const csrfHeader = document.querySelector("meta[name='_csrf_header']").content;
 
             $.ajax({
                 url: `/api/auctionitems/${auctionItemId}/bids`,
                 type: 'POST',
+                headers: {
+                    [csrfHeader]: csrfToken
+                },
                 contentType: 'application/json',
                 data: JSON.stringify({ amount: bidAmount, lastBidId: lastBidId }),
                 success: function() {
@@ -315,9 +322,14 @@
 
         // Get item with bids function
         function getItemWithBids(auctionItemId) {
+            const csrfToken = document.querySelector("meta[name='_csrf']").content;
+            const csrfHeader = document.querySelector("meta[name='_csrf_header']").content;
             return $.ajax({
                 url: `/api/auctionitems/${auctionItemId}`,
                 type: 'GET',
+                headers: {
+                    [csrfHeader]: csrfToken
+                },
                 dataType: 'json'
             }).catch(function(xhr) {
                 console.error('Failed to fetch latest bid with id: ' + auctionItemId, xhr);
