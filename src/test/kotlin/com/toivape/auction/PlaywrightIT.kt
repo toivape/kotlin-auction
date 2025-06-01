@@ -11,6 +11,7 @@ import com.microsoft.playwright.options.WaitForSelectorState
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.kotest.assertions.arrow.core.shouldBeRight
 import io.kotest.assertions.fail
+import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
@@ -42,7 +43,7 @@ class PlaywrightIT(@Autowired val bidService: BidService, @Autowired val auction
 
         // Add test user credentials
         private const val TEST_USERNAME = "dummy-user@toivape.com"
-        private const val TEST_PASSWORD = "stork"  // Use the password from your SecurityConfig
+        private const val TEST_PASSWORD = "stork"
     }
 
     @LocalServerPort
@@ -116,10 +117,10 @@ class PlaywrightIT(@Autowired val bidService: BidService, @Autowired val auction
         locator("#submit-bid").click()
     }
 
-    private fun Page.takeScreenshot(){
+    private fun Page.takeScreenshot(path:String = "screenshot.png"){
         log.info{"takeScreenshot"}
         screenshot(Page.ScreenshotOptions()
-            .setPath(Paths.get("screenshot.png"))
+            .setPath(Paths.get(path))
             .setFullPage(true))
     }
 
@@ -306,34 +307,32 @@ class PlaywrightIT(@Autowired val bidService: BidService, @Autowired val auction
     }
 
     @Test
-    fun `User can log in successfully`() {
+    fun `User is logged in and can not see Admin Panel navigation`() {
         playwright!!.chromium().launch().use { browser ->
-            val context = browser.newContext()
-            val page = context.newPage()
-
-            // Navigate to the login page
-            page.navigate("$baseUrl/login")
-
-            // Fill in login form
-            page.fill("input[name='username']", TEST_USERNAME)
-            page.fill("input[name='password']", TEST_PASSWORD)
-
-            // Take screenshot for debugging if needed
-            // page.takeScreenshot()
-
-            // Submit the form
-            page.click("button[type='submit']")
-
-            // Wait for navigation to complete (should redirect to the homepage after login)
-            page.waitForURL("$baseUrl/")
-
-            // Verify we're logged in by checking for some element that indicates a successful login
-            page.waitForSelector(".card")  // Assuming there are card elements on the homepage
-
-            // Could also check for username display if available
-            // page.textContent(".user-info") shouldContain TEST_USERNAME
+            val page = browser.frontpage()
 
             page.title() shouldBe "Auction"
+
+            val navbarContainsAdmin = page.locator(".navbar").textContent().contains("Admin Panel")
+            navbarContainsAdmin.shouldBeFalse()
+
+        // Take a screenshot to verify that there is no admin link
+            //page.takeScreenshot("admin-link-found.png")
+        }
+    }
+
+    @Test
+    fun `User can log out successfully`() {
+        playwright!!.chromium().launch().use { browser ->
+            val page = browser.frontpage()
+
+            // Do logout
+            page.click("form[action$='/logout'] button")
+            page.waitForSelector("text=You have been signed out")
+
+            // Check if button with text 'Sign in' exists
+            val signInButtonExists = page.locator("button:has-text('Sign in')").count() > 0
+            signInButtonExists.shouldBeTrue()
         }
     }
 }
