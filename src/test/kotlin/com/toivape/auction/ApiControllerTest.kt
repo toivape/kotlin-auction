@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.assertions.withClue
 import io.kotest.matchers.nulls.shouldNotBeNull
 import org.hamcrest.Matchers
+import org.hamcrest.Matchers.containsString
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -63,8 +64,8 @@ class ApiControllerTest(
         val newItem = item.copy(externalId = null, description = null)
         postItem(newItem).andExpect {
             status { isBadRequest() }
-            content { string(Matchers.containsString("description is mandatory")) }
-            content { string(Matchers.containsString("externalId is mandatory")) }
+            content { string(containsString("description is mandatory")) }
+            content { string(containsString("externalId is mandatory")) }
         }
     }
 
@@ -80,7 +81,7 @@ class ApiControllerTest(
         mvc.get("/api/auctionitems/d1d018fe-cc1b-4f9c-9d53-bc8f5dd9b515")
             .andExpect {
                 status { isOk() }
-                content { string(Matchers.containsString(",\"currentPrice\":290")) }
+                content { string(containsString(",\"currentPrice\":290")) }
             }
     }
 
@@ -97,6 +98,7 @@ class ApiControllerTest(
         mvc.get("/api/auctionitems/bad-uuid")
             .andExpect {
                 status { isBadRequest() }
+                content { string(containsString("Invalid UUID")) }
             }
     }
 
@@ -105,8 +107,8 @@ class ApiControllerTest(
         mvc.get("/api/auctionitems/d1d018fe-cc1b-4f9c-9d53-bc8f5dd9b515")
             .andExpect {
                 status { isOk() }
-                content { string(Matchers.containsString(",\"currentPrice\":290")) }
-                content { string(Matchers.containsString("\"id\":\"cf9e1c37-3647-4ad4-9539-23f592a32597\"")) }
+                content { string(containsString(",\"currentPrice\":290")) }
+                content { string(containsString("\"id\":\"cf9e1c37-3647-4ad4-9539-23f592a32597\"")) }
             }
     }
 
@@ -116,8 +118,8 @@ class ApiControllerTest(
         mvc.get("/api/auctionitems/8e61bd74-b109-4bac-8ad3-552e3d3451df")
             .andExpect {
                 status { isOk() }
-                content { string(Matchers.containsString(",\"currentPrice\":12")) }
-                content { string(Matchers.containsString("\"bids\":[]")) }
+                content { string(containsString(",\"currentPrice\":12")) }
+                content { string(containsString("\"bids\":[]")) }
             }
     }
 
